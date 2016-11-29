@@ -71,15 +71,21 @@ class SwiftmailerServiceProvider implements ServiceProviderInterface, EventListe
             $transport->setPassword($options['password']);
             $transport->setAuthMode($options['auth_mode']);
 
+            $plugins = $app['swiftmailer.plugins'];
+
             if (null !== $app['swiftmailer.sender_address']) {
-                $transport->registerPlugin(new \Swift_Plugins_ImpersonatePlugin($app['swiftmailer.sender_address']));
+                $plugins[] = new \Swift_Plugins_ImpersonatePlugin($app['swiftmailer.sender_address']);
             }
 
             if (!empty($app['swiftmailer.delivery_addresses'])) {
-                $transport->registerPlugin(new \Swift_Plugins_RedirectingPlugin(
+                $plugins[] = new \Swift_Plugins_RedirectingPlugin(
                     $app['swiftmailer.delivery_addresses'],
                     $app['swiftmailer.delivery_whitelist']
-                ));
+                );
+            }
+
+            foreach ($plugins as $plugin) {
+                $transport->registerPlugin($plugin);
             }
 
             return $transport;
@@ -100,6 +106,8 @@ class SwiftmailerServiceProvider implements ServiceProviderInterface, EventListe
         $app['swiftmailer.transport.eventdispatcher'] = function () {
             return new \Swift_Events_SimpleEventDispatcher();
         };
+
+        $app['swiftmailer.plugins'] = array();
 
         $app['swiftmailer.sender_address'] = null;
         $app['swiftmailer.delivery_addresses'] = [];

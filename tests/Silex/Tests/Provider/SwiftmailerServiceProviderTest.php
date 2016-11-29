@@ -89,4 +89,31 @@ class SwiftmailerServiceProviderTest extends \PHPUnit_Framework_TestCase
         $app->terminate($request, $response);
         $this->assertFalse($app['swiftmailer.spool']->hasFlushed);
     }
+
+    public function testSwiftMailerPlugins()
+    {
+        $plugin = $this->getMockBuilder('Swift_Events_EventListener')->getMock();
+
+        $dispatcher = $this->getMockBuilder('Swift_Events_SimpleEventDispatcher')->getMock();
+        $dispatcher->expects($this->exactly(3))
+            ->method('bindEventListener')
+            ->withConsecutive(
+                array($plugin),
+                array($this->isInstanceOf('Swift_Plugins_ImpersonatePlugin')),
+                array($this->isInstanceOf('Swift_Plugins_RedirectingPlugin'))
+            );
+
+        $app = new Application();
+
+        $app->register(new SwiftmailerServiceProvider());
+
+        $app['swiftmailer.transport.eventdispatcher'] = $dispatcher;
+        $app['swiftmailer.plugins'] = [$plugin];
+        $app['swiftmailer.sender_address'] = 'foo@example.com';
+        $app['swiftmailer.delivery_addresses'] = ['bar@example.com'];
+
+        $app->boot();
+
+        $app['swiftmailer.transport'];
+    }
 }
